@@ -15,7 +15,7 @@ void run_clockwise(int speed){
   //this should have coils and brushes set opposing fields
   digitalWrite(brush_south_pin, LOW);
   digitalWrite(coil_north_pin, LOW);
-  
+
   digitalWrite(coil_south_pin, HIGH);
   analogWrite(brush_north_pin, speed);
 }
@@ -56,10 +56,19 @@ void setup() {
 
 void loop() {
   int speed;
-  int minimum_speed = 75; //slower than this and the motor won't start spinning. determine experimentally
+  int minimum_speed = 0; //slower than this and the motor won't start spinning. determine experimentally
+  int max_speed = 255;
 
+  int cur_direction; //stop is 0, foward 1, reverse 2
 
   int new_speed = analogRead(speed_pot_pin);
+  new_speed = new_speed / 4; //analog read goes to 1024, scale down x4
+  if (new_speed > max_speed){
+    new_speed = max_speed;
+  }
+  else if (new_speed < minimum_speed){
+    new_speed = minimum_speed;
+  }
   //check to see if speed value has been updated since last loop
   if (new_speed != speed){
     speed = new_speed;
@@ -67,17 +76,29 @@ void loop() {
   }
 
   if(digitalRead(foward_pin)){
-    run_clockwise(speed)
+    if (cur_direction != 1){
+      Serial.println("running foward");
+    }
+    cur_direction = 1;
+    //run_clockwise(speed)
   }
   else if (digitalRead(reverse_pin)){
-    run_counterclockwise(speed)
+    if (cur_direction != 2){
+      Serial.println("running backwards");
+    }
+    cur_direction = 2;
+    //run_counterclockwise(speed)
   }
   else{
-    stop()
+
+    if (cur_direction != 0){
+      Serial.println("stopping");
+      stop();
+    }
+    cur_direction = 0;
   }
 
 
 
 
 }
-
