@@ -6,26 +6,26 @@ const int brush_south_pin = 1; //D1
 const int coil_north_pin = 14; //C4
 const int coil_south_pin = 15; //C6
 
+const int speed_pot_pin = 38; //F0
+
+const int foward_pin = 2; //D2
+const int reverse_pin = 3; //D3
 
 void run_clockwise(int speed){
   //this should have coils and brushes set opposing fields
   digitalWrite(brush_south_pin, LOW);
   digitalWrite(coil_north_pin, LOW);
-
-  for (int cur_speed = 0; cur_speed <= speed; cur_speed++){
-    analogWrite(brush_north_pin, cur_speed);
-    analogWrite(coil_south_pin, cur_speed);
-  }
+  
+  digitalWrite(coil_south_pin, HIGH);
+  analogWrite(brush_north_pin, speed);
 }
 void run_counterclockwise(int speed){
   //this should have coils and brushes set to equal fields
   digitalWrite(brush_south_pin, LOW);
   digitalWrite(coil_south_pin, LOW);
 
-  for (int cur_speed = 0; cur_speed <= speed; cur_speed++){
-    analogWrite(brush_north_pin, cur_speed);
-    analogWrite(coil_north_pin, cur_speed);
-  }
+  digitalWrite(coil_north_pin, HIGH);
+  analogWrite(brush_north_pin, speed);
 }
 
 void stop(){
@@ -38,37 +38,46 @@ void stop(){
 void setup() {
   Serial.begin(9600);
 
+  //hbridge pins
   pinMode(brush_north_pin, OUTPUT);
   pinMode(brush_south_pin, OUTPUT);
   pinMode(coil_north_pin, OUTPUT);
   pinMode(coil_south_pin, OUTPUT);
 
-  digitalWrite(brush_north_pin, LOW);
-  digitalWrite(brush_south_pin, LOW);
-  digitalWrite(coil_south_pin, LOW);
-  digitalWrite(coil_south_pin, LOW);
+  //needs to initalize analog refernece here
+
+  pinMode(speed_pot_pin, INPUT);
+  pinMode(foward_pin, INPUT_PULLUP);
+  pinMode(reverse_pin, INPUT_PULLUP);
+
+  //make sure motor is stopped
+  stop();
   }
 
 void loop() {
-  //speed is out of 255 max
-  int speed = 50;
-  //run_clockwise(speed);
-  //digitalWrite(brush_north_pin, HIGH);
-  analogWrite(brush_north_pin, speed);
-  digitalWrite(coil_south_pin, HIGH);
-  delay(10000);
+  int speed;
+  int minimum_speed = 75; //slower than this and the motor won't start spinning. determine experimentally
 
-  stop();
 
-  delay(2000);
-  //run_counterclockwise(speed);
-  //digitalWrite(brush_north_pin, HIGH);
-  analogWrite(brush_north_pin, speed);
-  digitalWrite(coil_south_pin, LOW);
-  digitalWrite(coil_north_pin, HIGH);
+  int new_speed = analogRead(speed_pot_pin);
+  //check to see if speed value has been updated since last loop
+  if (new_speed != speed){
+    speed = new_speed;
+    Serial.println(speed);
+  }
 
-  delay(10000);
-  stop();
+  if(digitalRead(foward_pin)){
+    run_clockwise(speed)
+  }
+  else if (digitalRead(reverse_pin)){
+    run_counterclockwise(speed)
+  }
+  else{
+    stop()
+  }
 
-  delay(2000);
+
+
+
 }
+
