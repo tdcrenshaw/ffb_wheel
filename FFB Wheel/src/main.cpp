@@ -80,21 +80,20 @@ void loop() {
       Serial.println("running foward");
     }
     cur_direction = 1;
-    //run_clockwise(speed)
+    run_clockwise(speed);
   }
   else if (digitalRead(reverse_pin)){
     if (cur_direction != 2){
       Serial.println("running backwards");
     }
     cur_direction = 2;
-    //run_counterclockwise(speed)
+    run_counterclockwise(speed);
   }
   else{
-
     if (cur_direction != 0){
       Serial.println("stopping");
-      stop();
     }
+    stop();
     cur_direction = 0;
   }
 
