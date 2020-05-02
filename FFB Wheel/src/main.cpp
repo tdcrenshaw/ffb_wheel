@@ -74,15 +74,15 @@ void loop() {
     speed = new_speed;
     Serial.println(speed);
   }
-
-  if(digitalRead(foward_pin)){
+  
+  if(digitalRead(foward_pin) == LOW){
     if (cur_direction != 1){
       Serial.println("running foward");
     }
     cur_direction = 1;
     run_clockwise(speed);
   }
-  else if (digitalRead(reverse_pin)){
+  else if (digitalRead(reverse_pin) == LOW){
     if (cur_direction != 2){
       Serial.println("running backwards");
     }
@@ -96,8 +96,4 @@ void loop() {
     stop();
     cur_direction = 0;
   }
-
-
-
-
 }
