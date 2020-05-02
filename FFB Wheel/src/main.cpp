@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <spi.h>
 
 //at some point consolidate these pins to same pwm timer
 const int brush_north_pin = 0; //D0
@@ -10,6 +11,20 @@ const int speed_pot_pin = 38; //F0
 
 const int foward_pin = 2; //D2
 const int reverse_pin = 3; //D3
+
+//SPI pin declaration
+//everything but slave select is autodefined
+//for encoder, MOSI is always 0. Probably don't need to run it
+//if this encoder is the only one we use, could just tie ss to ground on chip
+//SCK is 21 / B1, MOSI is 22 / B2, MISO is 23 / B3
+//on chip labels: SCK is DCLK, SS is CS, MISO is DIO
+//need a 10k-100k resistor on MOSI
+const int slave_select = 20; //B0
+SPISettings encoder_settings(
+
+int read_wheel_position(){
+  SPI.beginTransaction(encoder_settings);
+
 
 void run_clockwise(int speed){
   //this should have coils and brushes set opposing fields
@@ -44,6 +59,9 @@ void setup() {
   pinMode(coil_north_pin, OUTPUT);
   pinMode(coil_south_pin, OUTPUT);
 
+  //SPI init here
+  pinMode(slave_select, OUTPUT);
+  SPI.begin();
   //needs to initalize analog refernece here
 
   pinMode(speed_pot_pin, INPUT);
@@ -60,6 +78,12 @@ void loop() {
   int max_speed = 255;
 
   int cur_direction; //stop is 0, foward 1, reverse 2
+
+  int wheel_position; //might need to be a float
+
+  //this should probably become an interrupt
+  wheel_position = read_wheel_position();
+  Serial.println(wheel_position)
 
   int new_speed = analogRead(speed_pot_pin);
   new_speed = new_speed / 4; //analog read goes to 1024, scale down x4
