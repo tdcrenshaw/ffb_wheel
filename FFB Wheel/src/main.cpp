@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <spi.h>
+#include <SPI.h>
 
 //at some point consolidate these pins to same pwm timer
 const int brush_north_pin = 0; //D0
@@ -12,18 +12,97 @@ const int speed_pot_pin = 38; //F0
 const int foward_pin = 2; //D2
 const int reverse_pin = 3; //D3
 
-//SPI pin declaration
-//everything but slave select is autodefined
-//for encoder, MOSI is always 0. Probably don't need to run it
-//if this encoder is the only one we use, could just tie ss to ground on chip
 //SCK is 21 / B1, MOSI is 22 / B2, MISO is 23 / B3
-//on chip labels: SCK is DCLK, SS is CS, MISO is DIO
+//SPI library defines everything but slave select
+//on chip labels: encoder_clock is DCLK, encoder_select is CS, encoder_data is DIO
 //need a 10k-100k resistor on MOSI
-const int slave_select = 20; //B0
-SPISettings encoder_settings(
+//ground green
+//5v red
+//MISO = DIO yellow
+//MOSI Not used
+//SS = CS green
+//SCK = DCLK yellow
+const int encoder_select = 20; //B0 bottom green
+
+/** volatile **/
+#define NOP 0x0000
+#define ERRFL 0x0001
+#define PROG   0x0003
+#define DIAAGC 0x3FFC
+#define CORDICMAG 0x3FFD
+#define ANGLEUNC  0x3FFE
+#define ANGLECOM  0x3FFF
+
+/** non-volatile **/
+#define ZPOSM 0x0016
+#define ZPOSL 0x0017
+#define SETTINGS1 0x0018
+#define SETTINGS2 0x0019
+
+#define RD  0x40    // bit 14 "1" is Read + parity even
+#define WR  0x3F    //bit 14 ="0" is Write
+
+SPISettings settings(SPI_CLOCK_DIV4, MSBFIRST, SPI_MODE1);
+
+//encoder parity check
+int parity(unsigned int x) {
+  int parity = 0;
+  while (x > 0) {
+    parity = (parity + (x & 1)) % 2;
+    x >>= 1;
+  }
+  return (parity);
+}
 
 int read_wheel_position(){
-  SPI.beginTransaction(encoder_settings);
+  unsigned int address = ANGLECOM; //probably the value we want
+  unsigned int result = 0;   // result to return
+
+  byte res_h = 0;
+  byte res_l = 0;
+
+  // take the SS pin low to select the chip:
+  SPI.beginTransaction(settings);
+  digitalWrite(encoder_select, LOW);
+
+  //  send in the address and value via SPI:
+  byte v_l = address & 0x00FF;
+  byte v_h = (unsigned int)(address & 0x3F00) >> 8;
+
+  if (parity(address | (RD << 8)) == 1) v_h = v_h | 0x80; // set parity bit
+
+  v_h = v_h | RD; // its  a read command
+
+  // Serial.print( " parity:  ");Serial.println(parity(address | (RD <<8)));
+  // Serial.print(v_h, HEX); Serial.print(" A ");  Serial.print(v_l, HEX);  Serial.print(" >> ");
+
+  res_h = SPI.transfer(v_h);
+  res_l = SPI.transfer(v_l);
+
+  digitalWrite(encoder_select, HIGH);
+  SPI.endTransaction();
+
+  delay(2);
+
+  SPI.beginTransaction(settings);
+  digitalWrite(encoder_select, LOW);
+
+  //if (parity(0x00 | (RD <<8))==1) res_h = res_h | 0x80;  // set parity bit
+  //res_h = res_h | RD;
+
+  res_h = (SPI.transfer(0x00));
+  res_l = SPI.transfer(0x00);
+
+  res_h = res_h & 0x3F;  // filter bits outside data
+
+  //Serial.print(res_h, HEX);   Serial.print(" R  ");  Serial.print(res_l, HEX);   Serial.print("  ");
+
+  digitalWrite(encoder_select, HIGH);
+  SPI.endTransaction();
+
+  return (result = (res_h << 8) | res_l);
+}
+
 
 
 void run_clockwise(int speed){
@@ -59,9 +138,14 @@ void setup() {
   pinMode(coil_north_pin, OUTPUT);
   pinMode(coil_south_pin, OUTPUT);
 
-  //SPI init here
-  pinMode(slave_select, OUTPUT);
+  //encoder init here
+  pinMode(encoder_select, OUTPUT);
   SPI.begin();
+  //pretty sure next two lines are already defined in SPISettings above
+  //SPI.setDataMode(SPI_MODE1); // properties chip
+  //SPI.setBitOrder(MSBFIRST);  //properties chip
+
+
   //needs to initalize analog refernece here
 
   pinMode(speed_pot_pin, INPUT);
@@ -79,11 +163,11 @@ void loop() {
 
   int cur_direction; //stop is 0, foward 1, reverse 2
 
-  int wheel_position; //might need to be a float
+  unsigned int wheel_position;
 
   //this should probably become an interrupt
   wheel_position = read_wheel_position();
-  Serial.println(wheel_position)
+  Serial.println(wheel_position);
 
   int new_speed = analogRead(speed_pot_pin);
   new_speed = new_speed / 4; //analog read goes to 1024, scale down x4
@@ -98,7 +182,7 @@ void loop() {
     speed = new_speed;
     Serial.println(speed);
   }
-  
+
   if(digitalRead(foward_pin) == LOW){
     if (cur_direction != 1){
       Serial.println("running foward");
