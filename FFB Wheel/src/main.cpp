@@ -44,56 +44,6 @@ const int encoder_select = 20; //B0 bottom green
 
 SPISettings settings(SPI_CLOCK_DIV4, MSBFIRST, SPI_MODE1);
 
-// void AS5047P_Write( int address, int value)
-// {
-//   // take the SS pin low to select the chip:
-//   SPI.beginTransaction(settings);
-//   digitalWrite(encoder_select, LOW);
-//
-//   Serial.println(value, HEX);
-//
-//   //  send in the address via SPI:
-//
-//   byte v_l = address & 0x00FF;
-//   byte v_h = (unsigned int)(address & 0x3F00) >> 8;
-//
-//   if (parity(address & 0x3F) == 1) v_h = v_h | 0x80; // set parity bit
-//   //v_h = v_h & (WR | 0x80);  // its  a write command and don't change the parity bit (0x80)
-//
-//   Serial.print( " parity:  "); Serial.println(parity(address & 0x3F));
-//   Serial.print(v_h, HEX); Serial.print(" A ");  Serial.println(v_l, HEX);
-//
-//   SPI.transfer(v_h);
-//   SPI.transfer(v_l);
-//
-//   digitalWrite(encoder_select, HIGH);
-//   SPI.endTransaction();
-//
-//   delay(2);
-//
-//   SPI.beginTransaction(settings);
-//   digitalWrite(encoder_select, LOW);
-//
-//   //  send value via SPI:
-//
-//   v_l = value & 0x00FF;
-//   v_h = (unsigned int)(value & 0x3F00) >> 8;
-//
-//   if (parity(value & 0x3F) == 1) v_h = v_h | 0x80; // set parity bit
-//   //v_h = v_h & (WR | 0x80); // its a write command and don't change the parity bit (0x80)
-//
-//   Serial.print(v_h, HEX); Serial.print(" D ");  Serial.println(v_l, HEX);
-//
-//   SPI.transfer(v_h);
-//   SPI.transfer(v_l);
-//
-//   // take the SS pin high to de-select the chip:
-//   digitalWrite(encoder_select, HIGH);
-//   SPI.endTransaction();
-// }
-
-
-
 //encoder parity check
 int parity(unsigned int x) {
   int parity = 0;
@@ -102,6 +52,54 @@ int parity(unsigned int x) {
     x >>= 1;
   }
   return (parity);
+}
+
+void AS5047P_Write( int address, int value)
+{
+  // take the SS pin low to select the chip:
+  SPI.beginTransaction(settings);
+  digitalWrite(encoder_select, LOW);
+
+  Serial.println(value, HEX);
+
+  //  send in the address via SPI:
+
+  byte v_l = address & 0x00FF;
+  byte v_h = (unsigned int)(address & 0x3F00) >> 8;
+
+  if (parity(address & 0x3F) == 1) v_h = v_h | 0x80; // set parity bit
+  //v_h = v_h & (WR | 0x80);  // its  a write command and don't change the parity bit (0x80)
+
+  Serial.print( " parity:  "); Serial.println(parity(address & 0x3F));
+  Serial.print(v_h, HEX); Serial.print(" A ");  Serial.println(v_l, HEX);
+
+  SPI.transfer(v_h);
+  SPI.transfer(v_l);
+
+  digitalWrite(encoder_select, HIGH);
+  SPI.endTransaction();
+
+  delay(2);
+
+  SPI.beginTransaction(settings);
+  digitalWrite(encoder_select, LOW);
+
+  //  send value via SPI:
+
+  v_l = value & 0x00FF;
+  v_h = (unsigned int)(value & 0x3F00) >> 8;
+
+  if (parity(value & 0x3F) == 1) v_h = v_h | 0x80; // set parity bit
+  //v_h = v_h & (WR | 0x80); // its a write command and don't change the parity bit (0x80)
+
+  Serial.print(v_h, HEX); Serial.print(" D ");  Serial.println(v_l, HEX);
+
+  SPI.transfer(v_h);
+  SPI.transfer(v_l);
+
+  // take the SS pin high to de-select the chip:
+  digitalWrite(encoder_select, HIGH);
+  SPI.endTransaction();
 }
 
 int read_wheel_position(){
@@ -190,14 +188,15 @@ void setup() {
 
   //encoder init here
   pinMode(encoder_select, OUTPUT);
+  digitalWrite(encoder_select, LOW);
   SPI.begin();
   //pretty sure next two lines are already defined in SPISettings above
   SPI.setDataMode(SPI_MODE1); // properties chip
   SPI.setBitOrder(MSBFIRST);  //properties chip
-  //AS5047P_Write( SETTINGS1, 0x0001); //DJL was 0x0004);
-  //AS5047P_Write( SETTINGS2, 0x0000);
+  AS5047P_Write( SETTINGS1, 0x0001); //DJL was 0x0004);
+  AS5047P_Write( SETTINGS2, 0x0000);
   //AS5047P_Write( AZPOSM, 0x0000); // is it really possible to initially set angle at 0 degrees??
-  //AS5047P_Write( ZPOSL, 0x0000);
+  AS5047P_Write( ZPOSL, 0x0000);
 
   //needs to initalize analog refernece here
 
@@ -219,7 +218,7 @@ void loop() {
 
   //this should probably become an interrupt
   wheel_position = read_wheel_position();
-  Serial.println("angle is: ");
+  Serial.print("angle is: ");
   Serial.println(wheel_position);
 
   int speed = analogRead(speed_pot_pin);
