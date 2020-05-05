@@ -18,10 +18,10 @@ const int reverse_pin = 3; //D3
 //need a 10k-100k resistor on MOSI
 //ground green
 //5v red
-//MISO = DIO yellow
+//MISO = DIO yellow 23 B3
 //MOSI Not used
-//SS = CS green
-//SCK = DCLK yellow
+//SS = CS green 20 B0
+//SCK = DCLK yellow = 21 B1
 const int encoder_select = 20; //B0 bottom green
 
 /** volatile **/
@@ -43,6 +43,56 @@ const int encoder_select = 20; //B0 bottom green
 #define WR  0x3F    //bit 14 ="0" is Write
 
 SPISettings settings(SPI_CLOCK_DIV4, MSBFIRST, SPI_MODE1);
+
+// void AS5047P_Write( int address, int value)
+// {
+//   // take the SS pin low to select the chip:
+//   SPI.beginTransaction(settings);
+//   digitalWrite(encoder_select, LOW);
+//
+//   Serial.println(value, HEX);
+//
+//   //  send in the address via SPI:
+//
+//   byte v_l = address & 0x00FF;
+//   byte v_h = (unsigned int)(address & 0x3F00) >> 8;
+//
+//   if (parity(address & 0x3F) == 1) v_h = v_h | 0x80; // set parity bit
+//   //v_h = v_h & (WR | 0x80);  // its  a write command and don't change the parity bit (0x80)
+//
+//   Serial.print( " parity:  "); Serial.println(parity(address & 0x3F));
+//   Serial.print(v_h, HEX); Serial.print(" A ");  Serial.println(v_l, HEX);
+//
+//   SPI.transfer(v_h);
+//   SPI.transfer(v_l);
+//
+//   digitalWrite(encoder_select, HIGH);
+//   SPI.endTransaction();
+//
+//   delay(2);
+//
+//   SPI.beginTransaction(settings);
+//   digitalWrite(encoder_select, LOW);
+//
+//   //  send value via SPI:
+//
+//   v_l = value & 0x00FF;
+//   v_h = (unsigned int)(value & 0x3F00) >> 8;
+//
+//   if (parity(value & 0x3F) == 1) v_h = v_h | 0x80; // set parity bit
+//   //v_h = v_h & (WR | 0x80); // its a write command and don't change the parity bit (0x80)
+//
+//   Serial.print(v_h, HEX); Serial.print(" D ");  Serial.println(v_l, HEX);
+//
+//   SPI.transfer(v_h);
+//   SPI.transfer(v_l);
+//
+//   // take the SS pin high to de-select the chip:
+//   digitalWrite(encoder_select, HIGH);
+//   SPI.endTransaction();
+// }
+
+
 
 //encoder parity check
 int parity(unsigned int x) {
@@ -73,8 +123,8 @@ int read_wheel_position(){
 
   v_h = v_h | RD; // its  a read command
 
-  // Serial.print( " parity:  ");Serial.println(parity(address | (RD <<8)));
-  // Serial.print(v_h, HEX); Serial.print(" A ");  Serial.print(v_l, HEX);  Serial.print(" >> ");
+  //Serial.print( " parity:  ");Serial.println(parity(address | (RD <<8)));
+  //Serial.print(v_h, HEX); Serial.print(" A ");  Serial.print(v_l, HEX);  Serial.print(" >> ");
 
   res_h = SPI.transfer(v_h);
   res_l = SPI.transfer(v_l);
@@ -87,8 +137,8 @@ int read_wheel_position(){
   SPI.beginTransaction(settings);
   digitalWrite(encoder_select, LOW);
 
-  //if (parity(0x00 | (RD <<8))==1) res_h = res_h | 0x80;  // set parity bit
-  //res_h = res_h | RD;
+  if (parity(0x00 | (RD <<8))==1) res_h = res_h | 0x80;  // set parity bit
+  res_h = res_h | RD;
 
   res_h = (SPI.transfer(0x00));
   res_l = SPI.transfer(0x00);
@@ -142,9 +192,12 @@ void setup() {
   pinMode(encoder_select, OUTPUT);
   SPI.begin();
   //pretty sure next two lines are already defined in SPISettings above
-  //SPI.setDataMode(SPI_MODE1); // properties chip
-  //SPI.setBitOrder(MSBFIRST);  //properties chip
-
+  SPI.setDataMode(SPI_MODE1); // properties chip
+  SPI.setBitOrder(MSBFIRST);  //properties chip
+  //AS5047P_Write( SETTINGS1, 0x0001); //DJL was 0x0004);
+  //AS5047P_Write( SETTINGS2, 0x0000);
+  //AS5047P_Write( AZPOSM, 0x0000); // is it really possible to initially set angle at 0 degrees??
+  //AS5047P_Write( ZPOSL, 0x0000);
 
   //needs to initalize analog refernece here
 
@@ -157,7 +210,6 @@ void setup() {
   }
 
 void loop() {
-  int speed;
   int minimum_speed = 0; //slower than this and the motor won't start spinning. determine experimentally
   int max_speed = 255;
 
@@ -167,39 +219,37 @@ void loop() {
 
   //this should probably become an interrupt
   wheel_position = read_wheel_position();
+  Serial.println("angle is: ");
   Serial.println(wheel_position);
 
-  int new_speed = analogRead(speed_pot_pin);
-  new_speed = new_speed / 4; //analog read goes to 1024, scale down x4
-  if (new_speed > max_speed){
-    new_speed = max_speed;
+  int speed = analogRead(speed_pot_pin);
+  speed = speed / 4; //analog read goes to 1024, scale down x4
+  if (speed > speed){
+    speed = max_speed;
   }
-  else if (new_speed < minimum_speed){
-    new_speed = minimum_speed;
+  else if (speed < minimum_speed){
+    speed = minimum_speed;
   }
   //check to see if speed value has been updated since last loop
-  if (new_speed != speed){
-    speed = new_speed;
-    Serial.println(speed);
-  }
+  //Serial.println(speed);
 
   if(digitalRead(foward_pin) == LOW){
     if (cur_direction != 1){
-      Serial.println("running foward");
+      //Serial.println("running foward");
     }
     cur_direction = 1;
     run_clockwise(speed);
   }
   else if (digitalRead(reverse_pin) == LOW){
     if (cur_direction != 2){
-      Serial.println("running backwards");
+      //Serial.println("running backwards");
     }
     cur_direction = 2;
     run_counterclockwise(speed);
   }
   else{
     if (cur_direction != 0){
-      Serial.println("stopping");
+      //Serial.println("stopping");
     }
     stop();
     cur_direction = 0;
