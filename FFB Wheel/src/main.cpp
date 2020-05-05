@@ -18,6 +18,7 @@ const int reverse_pin = 3; //D3
 //ground green
 //5v red
 //MISO = SO yellow 23 B3
+//MOSI = SI
 //SS = CS green 20 B0
 //SCK = CK yellow = 21 B1
 const int encoder_select = 20; //B0 bottom green
@@ -30,13 +31,12 @@ int read_wheel_position(){
   digitalWrite(encoder_select, HIGH);
 
   for (int i = 0; i <=15; i++) {
-    delay(1);
+    delayMicroseconds(1);
     digitalWrite(encoder_clock, HIGH);
-    delay(1);
+    delayMicroseconds(1);
     digitalWrite(encoder_clock, LOW);
     byte temp_data = digitalRead(encoder_data_out);
     data = data >> temp_data;
-    Serial.print(temp_data);
   }
   digitalWrite(encoder_clock, LOW);
   digitalWrite(encoder_select, LOW);
@@ -80,10 +80,12 @@ void setup() {
 
   //encoder init here
   pinMode(encoder_select, OUTPUT);
-  pinMode(encoder_data_out, INPUT);
   pinMode(encoder_clock, OUTPUT);
-  digitalWrite(encoder_select, HIGH);
+  pinMode(encoder_data_out, INPUT);
+
+  digitalWrite(encoder_select, LOW);
   digitalWrite(encoder_clock, LOW);
+
   //needs to initalize analog refernece here
 
   pinMode(speed_pot_pin, INPUT);
@@ -104,7 +106,7 @@ void loop() {
 
   //this should probably become an interrupt
   wheel_position = read_wheel_position();
-  Serial.println("angle is: ");
+  Serial.print("angle is: ");
   Serial.println(wheel_position);
 
   int speed = analogRead(speed_pot_pin);
