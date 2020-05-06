@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <SPI.h>
 
 //at some point consolidate these pins to same pwm timer
 const int brush_north_pin = 0; //D0
@@ -12,17 +11,51 @@ const int speed_pot_pin = 38; //F0
 const int foward_pin = 2; //D2
 const int reverse_pin = 3; //D3
 
-//SCK is 21 / B1, MOSI is 22 / B2, MISO is 23 / B3
-//SPI library defines everything but slave select
+
+//chip uses 3 wire serial like interface. also kinda like spi?
 //on chip labels: encoder_clock is DCLK, encoder_select is CS, encoder_data is DIO
-//need a 10k-100k resistor on MOSI
+//need a 10k-100k resistor on DIO
 //ground green
 //5v red
-//MISO = DIO yellow 23 B3
-//MOSI Not used
+//MISO = SO yellow 23 B3
+//MOSI = SI
 //SS = CS green 20 B0
-//SCK = DCLK yellow = 21 B1
+//SCK = CK yellow = 21 B1
 const int encoder_select = 20; //B0 bottom green
+<<<<<<< HEAD
+=======
+const int encoder_clock = 21; // B1 bottom yellow
+const int encoder_data_out = 23; //B3 top yellow
+
+int read_wheel_position(){
+  int data;
+  byte temp_data;
+  int n = 9;
+  digitalWrite(encoder_select, LOW);
+  digitalWrite(encoder_clock, HIGH);
+  delayMicroseconds(1);
+  digitalWrite(encoder_select, HIGH);
+  //data is 21 bits long
+  //first 5 are writeable if we want to. Five zeros reads angle
+  //garbage in the middle, last 9 are angle register
+  for (int i = 0; i <=20; i++) {
+    delayMicroseconds(1);
+    digitalWrite(encoder_clock, LOW);
+    delayMicroseconds(1);
+    digitalWrite(encoder_clock, HIGH);
+    temp_data = digitalRead(encoder_data_out);
+    //looking at just last 9 bits
+    if (i > 11){
+      bitWrite(data, n, temp_data);
+      n--;
+    }
+  }
+  digitalWrite(encoder_clock, LOW);
+  digitalWrite(encoder_select, LOW);
+  return(data);
+}
+
+>>>>>>> simplified_SPI
 
 
 void run_clockwise(int speed){
@@ -60,8 +93,16 @@ void setup() {
 
   //encoder init here
   pinMode(encoder_select, OUTPUT);
+<<<<<<< HEAD
   digitalWrite(encoder_select, LOW);
 
+=======
+  pinMode(encoder_clock, OUTPUT);
+  pinMode(encoder_data_out, INPUT);
+
+  digitalWrite(encoder_select, LOW);
+  digitalWrite(encoder_clock, LOW);
+>>>>>>> simplified_SPI
 
   //needs to initalize analog refernece here
 
@@ -79,12 +120,17 @@ void loop() {
 
   int cur_direction; //stop is 0, foward 1, reverse 2
 
-  unsigned int wheel_position;
+  int wheel_position;
 
   //this should probably become an interrupt
   wheel_position = read_wheel_position();
+<<<<<<< HEAD
   Serial.print("angle is: ");
   Serial.println(wheel_position);
+=======
+  //Serial.print("angle is: ");
+  //Serial.println(wheel_position);
+>>>>>>> simplified_SPI
 
   int speed = analogRead(speed_pot_pin);
   speed = speed / 4; //analog read goes to 1024, scale down x4
