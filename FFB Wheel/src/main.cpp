@@ -11,10 +11,10 @@ const int speed_pot_pin = 38; //F0
 const int foward_pin = 2; //D2
 const int reverse_pin = 3; //D3
 
-//SCK is 21 / B1, MOSI is 22 / B2, MISO is 23 / B3
-//SPI library defines everything but slave select
+
+//chip uses 3 wire serial like interface. also kinda like spi?
 //on chip labels: encoder_clock is DCLK, encoder_select is CS, encoder_data is DIO
-//need a 10k-100k resistor on MOSI
+//need a 10k-100k resistor on DIO
 //ground green
 //5v red
 //MISO = SO yellow 23 B3
@@ -25,17 +25,6 @@ const int encoder_select = 20; //B0 bottom green
 const int encoder_clock = 21; // B1 bottom yellow
 const int encoder_data_out = 23; //B3 top yellow
 
-void binaryfun(){
-  int mybyte = 1;
-  int mynum = 0;
-  for (int i = 0; i <=8; i++) {
-    bitWrite(mynum, i, 1);
-    Serial.print("num ");
-    Serial.println(mynum);
-    delay(1000);
-  }
-
-}
 int read_wheel_position(){
   int data;
   byte temp_data;
@@ -125,11 +114,10 @@ void loop() {
 
   int wheel_position;
 
-  //binaryfun();
   //this should probably become an interrupt
   wheel_position = read_wheel_position();
-  Serial.print("angle is: ");
-  Serial.println(wheel_position);
+  //Serial.print("angle is: ");
+  //Serial.println(wheel_position);
 
   int speed = analogRead(speed_pot_pin);
   speed = speed / 4; //analog read goes to 1024, scale down x4
