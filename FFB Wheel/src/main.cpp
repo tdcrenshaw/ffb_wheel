@@ -26,20 +26,26 @@ const int encoder_clock = 21; // B1 bottom yellow
 const int encoder_data_out = 23; //B3 top yellow
 
 
-int read_wheel_position(){
-  unsigned int data;
+long read_wheel_position(){
+  long data;
+  byte temp_data;
+  Serial.println(temp_data);
+  digitalWrite(encoder_select, LOW);
+  digitalWrite(encoder_clock, HIGH);
+  delayMicroseconds(1);
   digitalWrite(encoder_select, HIGH);
-
-  for (int i = 0; i <=15; i++) {
-    delayMicroseconds(1);
-    digitalWrite(encoder_clock, HIGH);
+  for (int i = 0; i <=20; i++) {
     delayMicroseconds(1);
     digitalWrite(encoder_clock, LOW);
-    byte temp_data = digitalRead(encoder_data_out);
-    data = data >> temp_data;
+    delayMicroseconds(1);
+    digitalWrite(encoder_clock, HIGH);
+    temp_data = digitalRead(encoder_data_out);
+    Serial.print(temp_data);
   }
   digitalWrite(encoder_clock, LOW);
   digitalWrite(encoder_select, LOW);
+  delay(1000);
+  Serial.println("");
   return(data);
 }
 
@@ -102,7 +108,7 @@ void loop() {
 
   int cur_direction; //stop is 0, foward 1, reverse 2
 
-  unsigned int wheel_position;
+  long wheel_position;
 
   //this should probably become an interrupt
   wheel_position = read_wheel_position();
