@@ -25,27 +25,42 @@ const int encoder_select = 20; //B0 bottom green
 const int encoder_clock = 21; // B1 bottom yellow
 const int encoder_data_out = 23; //B3 top yellow
 
+void binaryfun(){
+  int mybyte = 1;
+  int mynum = 0;
+  for (int i = 0; i <=8; i++) {
+    bitWrite(mynum, i, 1);
+    Serial.print("num ");
+    Serial.println(mynum);
+    delay(1000);
+  }
 
-long read_wheel_position(){
-  long data;
+}
+int read_wheel_position(){
+  int data;
   byte temp_data;
-  Serial.println(temp_data);
+  int n = 9;
   digitalWrite(encoder_select, LOW);
   digitalWrite(encoder_clock, HIGH);
   delayMicroseconds(1);
   digitalWrite(encoder_select, HIGH);
+  //data is 21 bits long
+  //first 5 are writeable if we want to. Five zeros reads angle
+  //garbage in the middle, last 9 are angle register
   for (int i = 0; i <=20; i++) {
     delayMicroseconds(1);
     digitalWrite(encoder_clock, LOW);
     delayMicroseconds(1);
     digitalWrite(encoder_clock, HIGH);
     temp_data = digitalRead(encoder_data_out);
-    Serial.print(temp_data);
+    //looking at just last 9 bits
+    if (i > 11){
+      bitWrite(data, n, temp_data);
+      n--;
+    }
   }
   digitalWrite(encoder_clock, LOW);
   digitalWrite(encoder_select, LOW);
-  delay(1000);
-  Serial.println("");
   return(data);
 }
 
@@ -108,8 +123,9 @@ void loop() {
 
   int cur_direction; //stop is 0, foward 1, reverse 2
 
-  long wheel_position;
+  int wheel_position;
 
+  //binaryfun();
   //this should probably become an interrupt
   wheel_position = read_wheel_position();
   Serial.print("angle is: ");
